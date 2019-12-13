@@ -1,0 +1,168 @@
+{
+  "EDITOR_STATE": {
+    "allProjectFiles": {
+      "6bcfbd55-1ac3-436b-8721-fbd88a17bebd": {
+        "id": "6bcfbd55-1ac3-436b-8721-fbd88a17bebd",
+        "parent": null,
+        "name": "serverless-dynamodb-backup",
+        "type": "DIRECTORY",
+        "isDirectory": true,
+        "children": [
+          "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e"
+        ],
+        "isRemovable": false,
+        "filePath": "serverless-dynamodb-backup"
+      },
+      "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e": {
+        "id": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
+        "parent": "6bcfbd55-1ac3-436b-8721-fbd88a17bebd",
+        "name": "handler.js",
+        "type": "JS_LAMBDA",
+        "isDirectory": false,
+        "children": [],
+        "isRemovable": true,
+        "filePath": "serverless-dynamodb-backup/handler.js",
+        "code": "'use strict';\n\nconst aws = require('aws-sdk');\n\nconst s3 = new aws.S3({ region: 'ap-southeast-1' });\n\nmodule.exports.backup = (event, context, callback) => {\n  const records = event.Records;\n\n  Promise.all(records.map((record) => {\n    const keysList = Object.keys(record.dynamodb.Keys).map((key) => {\n      const keyDefinition = record.dynamodb.Keys[key];\n      const type = Object.keys(keyDefinition)[0];\n      const value = keyDefinition[type];\n      return value;\n    });\n\n    const keysString = keysList.join('/');\n    const image = aws.DynamoDB.Converter.output({ M: record.dynamodb.NewImage });\n\n    return s3.putObject({\n      Bucket: process.env.BUCKET,\n      Key: `${process.env.PREFIX}/${process.env.TABLE}/${keysString}/image.json`,\n      Body: JSON.stringify(image),\n    }).promise()\n      .then((response) => {\n        console.log(`${keysString} snapshot done`, response);\n      })\n      .catch((err) => {\n        console.error('Error', err);\n      });\n  }))\n    .then(v => callback(null, v), callback);\n};\n",
+        "config": {
+          "runtime": "nodejs8.10",
+          "handler": "backup",
+          "timeout": 300,
+          "memory": 128,
+          "layers": []
+        },
+        "triggers": [],
+        "customSecurityPolicy": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject"
+              ],
+              "Resource": "arn:aws:s3:::EXAMPLE/FOO/staging_EXAMPLE/*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:GetRecords",
+                "dynamodb:GetShardIterator",
+                "dynamodb:DescribeStream",
+                "dynamodb:ListStreams"
+              ],
+              "Resource": "arn:aws:dynamodb:ap-southeast-1:*:table/staging_EXAMPLE/stream/*"
+            }
+          ]
+        }
+      },
+      "bc6178b7-cb1a-4007-8957-5cfb0fcd7e03": {
+        "id": "bc6178b7-cb1a-4007-8957-5cfb0fcd7e03",
+        "parent": null,
+        "name": "serverless.yml",
+        "type": "YAML_FILE",
+        "isDirectory": false,
+        "children": [],
+        "isRemovable": true,
+        "filePath": "serverless.yml",
+        "code": "service: serverless-dynamodb-backup\n\ncustom:\n  bucket: EXAMPLE\n  dynamoDBTableName: \"${opt:stage, self:provider.stage}_EXAMPLE\"\n  prefix: FOO\n\nprovider:\n  name: aws\n  runtime: nodejs6.10\n  stage: staging\n  iamRoleStatements:\n    - Effect: Allow\n      Action:\n        - s3:PutObject\n      Resource: \"arn:aws:s3:::${self:custom.bucket}/${self:custom.prefix}/${self:custom.dynamoDBTableName}/*\"\n    - Effect: Allow\n      Action:\n        - \"dynamodb:GetRecords\"\n        - \"dynamodb:GetShardIterator\"\n        - \"dynamodb:DescribeStream\"\n        - \"dynamodb:ListStreams\"\n      Resource: \"arn:aws:dynamodb:ap-southeast-1:*:table/${self:custom.dynamoDBTableName}/stream/*\"\n\nfunctions:\n  backup:\n    handler: handler.backup\n    environment:\n      STAGE: \"${opt:stage, self:provider.stage}\"\n      BUCKET: \"${self:custom.bucket}\"\n      TABLE: \"${self:custom.dynamoDBTableName}\"\n      PREFIX: \"${self:custom.prefix}\"\n    timeout: 300\n"
+      },
+      "037d26bc-5177-43d1-b5eb-0a07e0dde13a": {
+        "id": "037d26bc-5177-43d1-b5eb-0a07e0dde13a",
+        "parent": null,
+        "name": "README.md",
+        "type": "MARKDOWN_FILE",
+        "isDirectory": false,
+        "children": [],
+        "isRemovable": true,
+        "filePath": "README.md",
+        "code": "<!--\ntitle: TODO\ndescription: This examples shows your how to create a backup of your DynamoDB table to S3.\nlayout: Doc\nframework: v1\nplatform: AWS\nlanguage: nodeJS\nauthorLink: 'https://github.com/kaihendry'\nauthorName: 'Kai Hendry'\nauthorAvatar: 'https://avatars3.githubusercontent.com/u/765871?v=4&s=140'\n-->\n# DynamoDB stream events to AWS S3\n\nWhich effectively creates a **backup of your dynamoDB table** assuming an event\nwas caught for every record. Hint: [Introduce a new field\n\"backedup\"](https://s.natalian.org/2022/rupdated.js) to effectively\ntrigger a backup.\n\nNOTE: DynamoDB triggers need to be manually associated / setup with the lambda function.\n\n* https://ap-southeast-1.console.aws.amazon.com/dynamodb/home?region=ap-southeast-1#tables:selected=staging_EXAMPLE\n* https://ap-southeast-1.console.aws.amazon.com/dynamodb/home?region=ap-southeast-1#tables:selected=production_EXAMPLE\n\nUpon deletion the image.json becomes an empty file.\n"
+      },
+      "c9d5d497-b3f3-4c92-b9fb-9ab786c09a9d": {
+        "id": "c9d5d497-b3f3-4c92-b9fb-9ab786c09a9d",
+        "parent": null,
+        "name": "package.json",
+        "type": "JSON_FILE",
+        "isDirectory": false,
+        "children": [],
+        "isRemovable": true,
+        "filePath": "package.json",
+        "code": "{\n  \"name\": \"aws-node-dynamodb-backup\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Serverless DynamoDB changes backed up to S3\",\n  \"repository\": \"\",\n  \"author\": \"Kai Hendry <hendry@spuul.com>\",\n  \"license\": \"MIT\",\n  \"dependencies\": {\n    \"aws-sdk\": \"^2.73.0\"\n  }\n}\n"
+      }
+    },
+    "rootNode": "6bcfbd55-1ac3-436b-8721-fbd88a17bebd",
+    "openFiles": [
+      "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e"
+    ],
+    "currentFileId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
+    "resources": {},
+    "customTemplate": {
+      "dialect": "CloudFormation",
+      "definitions": null
+    },
+    "envVariables": [
+      {
+        "lambdaId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
+        "varKey": "STAGE",
+        "varValue": "staging",
+        "shouldPersist": true,
+        "displayOnly": false,
+        "editable": true
+      },
+      {
+        "lambdaId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
+        "varKey": "BUCKET",
+        "varValue": "EXAMPLE",
+        "shouldPersist": true,
+        "displayOnly": false,
+        "editable": true
+      },
+      {
+        "lambdaId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
+        "varKey": "TABLE",
+        "varValue": "staging_EXAMPLE",
+        "shouldPersist": true,
+        "displayOnly": false,
+        "editable": true
+      },
+      {
+        "lambdaId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
+        "varKey": "PREFIX",
+        "varValue": "FOO",
+        "shouldPersist": true,
+        "displayOnly": false,
+        "editable": true
+      },
+      {
+        "lambdaId": "all",
+        "varKey": "SIGMA_AWS_ACC_ID",
+        "varValue": null,
+        "shouldPersist": false,
+        "displayOnly": false,
+        "editable": false
+      }
+    ],
+    "packageJSON": {
+      "dependencies": {
+        "aws-sdk": {
+          "name": "aws-sdk",
+          "language": "javascript",
+          "version": "^2.73.0"
+        }
+      }
+    }
+  },
+  "PROJECT_META": {
+    "projectName": "aws-node-dynamodb-backup",
+    "projectDescription": "Serverless DynamoDB changes backed up to S3",
+    "projectVersion": "1.0.0",
+    "projectRegion": "us-east-1",
+    "platform": "AWS",
+    "platformRegions": {},
+    "lastSave": 1576216873130
+  },
+  "VCS_STATE": {
+    "provider": "GitHub",
+    "repo": {
+      "name": "aws-node-dynamodb-backup",
+      "url": "https://github.com/Indunil1992/aws-node-dynamodb-backup"
+    }
+  }
+}
