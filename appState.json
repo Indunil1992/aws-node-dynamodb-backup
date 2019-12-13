@@ -22,7 +22,7 @@
         "children": [],
         "isRemovable": true,
         "filePath": "serverless-dynamodb-backup/handler.js",
-        "code": "'use strict';\n\nconst aws = require('aws-sdk');\n\nconst s3 = new aws.S3({ region: 'ap-southeast-1' });\n\nmodule.exports.backup = (event, context, callback) => {\n  const records = event.Records;\n\n  Promise.all(records.map((record) => {\n    const keysList = Object.keys(record.dynamodb.Keys).map((key) => {\n      const keyDefinition = record.dynamodb.Keys[key];\n      const type = Object.keys(keyDefinition)[0];\n      const value = keyDefinition[type];\n      return value;\n    });\n\n    const keysString = keysList.join('/');\n    const image = aws.DynamoDB.Converter.output({ M: record.dynamodb.NewImage });\n\n    return s3.putObject({\n      \"Body\": JSON.stringify(image),\n      \"Bucket\": \"process.env.indunil\",\n      \"Key\": \"@{process.env.PREFIX}/@{process.env.TABLE}/@{keysString}/image.json\"\n    }).promise()\n      .then((response) => {\n        console.log(`${keysString} snapshot done`, response);\n      })\n      .catch((err) => {\n        console.error('Error', err);\n      });\n  }))\n    .then(v => callback(null, v), callback);\n};\n",
+        "code": "'use strict';\n\nconst aws = require('aws-sdk');\n\nconst s3 = new aws.S3({ region: 'ap-southeast-1' });\n\nmodule.exports.backup = (event, context, callback) => {\n  const records = event.Records;\n\n  Promise.all(records.map((record) => {\n    const keysList = Object.keys(record.dynamodb.Keys).map((key) => {\n      const keyDefinition = record.dynamodb.Keys[key];\n      const type = Object.keys(keyDefinition)[0];\n      const value = keyDefinition[type];\n      return value;\n    });\n\n    const keysString = keysList.join('/');\n    const image = aws.DynamoDB.Converter.output({ M: record.dynamodb.NewImage });\n\n    return s3.putObject({\n      \"Body\": JSON.stringify(image),\n      \"Bucket\": \"process.env.BUCKET\",\n      \"Key\": \"@{process.env.PREFIX}/@{process.env.TABLE}/@{keysString}/image.json\"\n    }).promise()\n      .then((response) => {\n        console.log(`${keysString} snapshot done`, response);\n      })\n      .catch((err) => {\n        console.error('Error', err);\n      });\n  }))\n    .then(v => callback(null, v), callback);\n};\n",
         "config": {
           "runtime": "nodejs8.10",
           "handler": "backup",
@@ -212,7 +212,7 @@
               "table": {
                 "arn": "",
                 "name": "backup",
-                "partitionKey": "test",
+                "partitionKey": "map",
                 "partitionKeyType": "S",
                 "hasSortKey": false,
                 "sortKey": "test",
@@ -239,10 +239,10 @@
                   "mode": 0,
                   "table": {
                     "arn": "",
-                    "name": "newDynamoDBINdunil",
-                    "partitionKey": "1",
-                    "partitionKeyType": "N",
-                    "hasSortKey": true,
+                    "name": "backup",
+                    "partitionKey": "test",
+                    "partitionKeyType": "S",
+                    "hasSortKey": false,
                     "sortKey": "test",
                     "sortKeyType": "S",
                     "payPerRequest": true,
@@ -264,9 +264,40 @@
                     },
                     "isGlobalEditMode": false,
                     "parameters": {
-                      "Key": {},
-                      "Item": {},
-                      "ExpressionAttributeValues": {}
+                      "mode": 0,
+                      "table": {
+                        "arn": "",
+                        "name": "newDynamoDBINdunil",
+                        "partitionKey": "1",
+                        "partitionKeyType": "N",
+                        "hasSortKey": true,
+                        "sortKey": "test",
+                        "sortKeyType": "S",
+                        "payPerRequest": true,
+                        "mode": 0
+                      },
+                      "isGlobalEditMode": false,
+                      "parameters": {
+                        "Key": {},
+                        "Item": {},
+                        "ExpressionAttributeValues": {}
+                      },
+                      "triggerParams": {
+                        "StartingPosition": "TRIM_HORIZON",
+                        "BatchSize": "100",
+                        "StreamViewType": "NEW_IMAGE"
+                      },
+                      "validator": {
+                        "validatableFields": {},
+                        "validity": true
+                      },
+                      "valid": true,
+                      "triggerConfig": {
+                        "StartingPosition": "TRIM_HORIZON",
+                        "BatchSize": "100",
+                        "StreamViewType": "NEW_IMAGE"
+                      },
+                      "TableName": "newDynamoDBINdunil"
                     },
                     "triggerParams": {
                       "StartingPosition": "TRIM_HORIZON",
@@ -300,7 +331,7 @@
                     "BatchSize": "100",
                     "StreamViewType": "NEW_IMAGE"
                   },
-                  "TableName": "newDynamoDBINdunil"
+                  "TableName": "backup"
                 },
                 "triggerParams": {
                   "StartingPosition": "TRIM_HORIZON",
@@ -337,7 +368,7 @@
               "TableName": "backup"
             },
             "triggerParams": {
-              "StartingPosition": "TRIM_HORIZON",
+              "StartingPosition": "AT_TIMESTAMP",
               "BatchSize": "100",
               "StreamViewType": "NEW_IMAGE"
             },
@@ -347,7 +378,7 @@
             },
             "valid": true,
             "triggerConfig": {
-              "StartingPosition": "TRIM_HORIZON",
+              "StartingPosition": "AT_TIMESTAMP",
               "BatchSize": "100",
               "StreamViewType": "NEW_IMAGE"
             },
@@ -393,7 +424,7 @@
       {
         "lambdaId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
         "varKey": "BUCKET",
-        "varValue": "EXAMPLE",
+        "varValue": "indunil",
         "shouldPersist": true,
         "displayOnly": false,
         "editable": true
@@ -401,7 +432,7 @@
       {
         "lambdaId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
         "varKey": "TABLE",
-        "varValue": "staging_EXAMPLE",
+        "varValue": "backup",
         "shouldPersist": true,
         "displayOnly": false,
         "editable": true
@@ -440,7 +471,7 @@
     "projectRegion": "us-east-1",
     "platform": "AWS",
     "platformRegions": {},
-    "lastSave": 1576219392053
+    "lastSave": 1576221975806
   },
   "VCS_STATE": {
     "provider": "GitHub",

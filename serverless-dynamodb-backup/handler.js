@@ -20,7 +20,7 @@ module.exports.backup = (event, context, callback) => {
 
     return s3.putObject({
       "Body": JSON.stringify(image),
-      "Bucket": "process.env.indunil",
+      "Bucket": "process.env.BUCKET",
       "Key": "@{process.env.PREFIX}/@{process.env.TABLE}/@{keysString}/image.json"
     }).promise()
       .then((response) => {
