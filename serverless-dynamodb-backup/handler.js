@@ -19,9 +19,9 @@ module.exports.backup = (event, context, callback) => {
     const image = aws.DynamoDB.Converter.output({ M: record.dynamodb.NewImage });
 
     return s3.putObject({
-      "Body": JSON.stringify(image),
-      "Bucket": "process.env.BUCKET",
-      "Key": "@{process.env.PREFIX}/@{process.env.TABLE}/@{keysString}/image.json"
+      Bucket: process.env.BUCKET,
+      Key: `${process.env.PREFIX}/${process.env.TABLE}/${keysString}/image.json`,
+      Body: JSON.stringify(image),
     }).promise()
       .then((response) => {
         console.log(`${keysString} snapshot done`, response);

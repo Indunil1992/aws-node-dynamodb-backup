@@ -1,45 +1,36 @@
 {
   "EDITOR_STATE": {
     "allProjectFiles": {
-      "6bcfbd55-1ac3-436b-8721-fbd88a17bebd": {
-        "id": "6bcfbd55-1ac3-436b-8721-fbd88a17bebd",
+      "2709f6d1-a292-44b4-9ed1-36199d2d6e5e": {
+        "id": "2709f6d1-a292-44b4-9ed1-36199d2d6e5e",
         "parent": null,
         "name": "serverless-dynamodb-backup",
         "type": "DIRECTORY",
         "isDirectory": true,
         "children": [
-          "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e"
+          "80c154eb-e1e9-4602-a04c-738d0871ce09"
         ],
         "isRemovable": false,
         "filePath": "serverless-dynamodb-backup"
       },
-      "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e": {
-        "id": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
-        "parent": "6bcfbd55-1ac3-436b-8721-fbd88a17bebd",
+      "80c154eb-e1e9-4602-a04c-738d0871ce09": {
+        "id": "80c154eb-e1e9-4602-a04c-738d0871ce09",
+        "parent": "2709f6d1-a292-44b4-9ed1-36199d2d6e5e",
         "name": "handler.js",
         "type": "JS_LAMBDA",
         "isDirectory": false,
         "children": [],
         "isRemovable": true,
         "filePath": "serverless-dynamodb-backup/handler.js",
-        "code": "'use strict';\n\nconst aws = require('aws-sdk');\n\nconst s3 = new aws.S3({ region: 'ap-southeast-1' });\n\nmodule.exports.backup = (event, context, callback) => {\n  const records = event.Records;\n\n  Promise.all(records.map((record) => {\n    const keysList = Object.keys(record.dynamodb.Keys).map((key) => {\n      const keyDefinition = record.dynamodb.Keys[key];\n      const type = Object.keys(keyDefinition)[0];\n      const value = keyDefinition[type];\n      return value;\n    });\n\n    const keysString = keysList.join('/');\n    const image = aws.DynamoDB.Converter.output({ M: record.dynamodb.NewImage });\n\n    return s3.putObject({\n      \"Body\": JSON.stringify(image),\n      \"Bucket\": \"process.env.BUCKET\",\n      \"Key\": \"@{process.env.PREFIX}/@{process.env.TABLE}/@{keysString}/image.json\"\n    }).promise()\n      .then((response) => {\n        console.log(`${keysString} snapshot done`, response);\n      })\n      .catch((err) => {\n        console.error('Error', err);\n      });\n  }))\n    .then(v => callback(null, v), callback);\n};\n",
+        "code": "'use strict';\n\nconst aws = require('aws-sdk');\n\nconst s3 = new aws.S3({ region: 'ap-southeast-1' });\n\nmodule.exports.backup = (event, context, callback) => {\n  const records = event.Records;\n\n  Promise.all(records.map((record) => {\n    const keysList = Object.keys(record.dynamodb.Keys).map((key) => {\n      const keyDefinition = record.dynamodb.Keys[key];\n      const type = Object.keys(keyDefinition)[0];\n      const value = keyDefinition[type];\n      return value;\n    });\n\n    const keysString = keysList.join('/');\n    const image = aws.DynamoDB.Converter.output({ M: record.dynamodb.NewImage });\n\n    return s3.putObject({\n      Bucket: process.env.BUCKET,\n      Key: `${process.env.PREFIX}/${process.env.TABLE}/${keysString}/image.json`,\n      Body: JSON.stringify(image),\n    }).promise()\n      .then((response) => {\n        console.log(`${keysString} snapshot done`, response);\n      })\n      .catch((err) => {\n        console.error('Error', err);\n      });\n  }))\n    .then(v => callback(null, v), callback);\n};\n",
         "config": {
-          "runtime": "nodejs8.10",
+          "runtime": "nodejs10.x",
           "handler": "backup",
           "timeout": 300,
           "memory": 128,
           "layers": []
         },
-        "triggers": [
-          {
-            "resourceName": "ddbbackup",
-            "config": {
-              "StartingPosition": "AT_TIMESTAMP",
-              "BatchSize": "100",
-              "StreamViewType": "NEW_IMAGE"
-            }
-          }
-        ],
+        "triggers": [],
         "customSecurityPolicy": {
           "Statement": [
             {
@@ -60,19 +51,10 @@
               "Resource": "arn:aws:dynamodb:ap-southeast-1:*:table/staging_EXAMPLE/stream/*"
             }
           ]
-        },
-        "testCases": {
-          "11784491-9091-4c3e-a11e-a0628e5284dc": {
-            "id": "11784491-9091-4c3e-a11e-a0628e5284dc",
-            "name": "Test event",
-            "functionId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
-            "event": "{\"key1\": \"value1\", \"key2\": \"value2\", \"key3\": \"value3\"}",
-            "eventTemplate": "hello-world"
-          }
         }
       },
-      "bc6178b7-cb1a-4007-8957-5cfb0fcd7e03": {
-        "id": "bc6178b7-cb1a-4007-8957-5cfb0fcd7e03",
+      "8a3c6b23-0035-479b-8036-13a25f8a5c40": {
+        "id": "8a3c6b23-0035-479b-8036-13a25f8a5c40",
         "parent": null,
         "name": "serverless.yml",
         "type": "YAML_FILE",
@@ -82,8 +64,8 @@
         "filePath": "serverless.yml",
         "code": "service: serverless-dynamodb-backup\n\ncustom:\n  bucket: EXAMPLE\n  dynamoDBTableName: \"${opt:stage, self:provider.stage}_EXAMPLE\"\n  prefix: FOO\n\nprovider:\n  name: aws\n  runtime: nodejs6.10\n  stage: staging\n  iamRoleStatements:\n    - Effect: Allow\n      Action:\n        - s3:PutObject\n      Resource: \"arn:aws:s3:::${self:custom.bucket}/${self:custom.prefix}/${self:custom.dynamoDBTableName}/*\"\n    - Effect: Allow\n      Action:\n        - \"dynamodb:GetRecords\"\n        - \"dynamodb:GetShardIterator\"\n        - \"dynamodb:DescribeStream\"\n        - \"dynamodb:ListStreams\"\n      Resource: \"arn:aws:dynamodb:ap-southeast-1:*:table/${self:custom.dynamoDBTableName}/stream/*\"\n\nfunctions:\n  backup:\n    handler: handler.backup\n    environment:\n      STAGE: \"${opt:stage, self:provider.stage}\"\n      BUCKET: \"${self:custom.bucket}\"\n      TABLE: \"${self:custom.dynamoDBTableName}\"\n      PREFIX: \"${self:custom.prefix}\"\n    timeout: 300\n"
       },
-      "037d26bc-5177-43d1-b5eb-0a07e0dde13a": {
-        "id": "037d26bc-5177-43d1-b5eb-0a07e0dde13a",
+      "1c9bde18-d59c-4197-9db2-1a9dacbf82f0": {
+        "id": "1c9bde18-d59c-4197-9db2-1a9dacbf82f0",
         "parent": null,
         "name": "README.md",
         "type": "MARKDOWN_FILE",
@@ -93,8 +75,8 @@
         "filePath": "README.md",
         "code": "<!--\ntitle: TODO\ndescription: This examples shows your how to create a backup of your DynamoDB table to S3.\nlayout: Doc\nframework: v1\nplatform: AWS\nlanguage: nodeJS\nauthorLink: 'https://github.com/kaihendry'\nauthorName: 'Kai Hendry'\nauthorAvatar: 'https://avatars3.githubusercontent.com/u/765871?v=4&s=140'\n-->\n# DynamoDB stream events to AWS S3\n\nWhich effectively creates a **backup of your dynamoDB table** assuming an event\nwas caught for every record. Hint: [Introduce a new field\n\"backedup\"](https://s.natalian.org/2022/rupdated.js) to effectively\ntrigger a backup.\n\nNOTE: DynamoDB triggers need to be manually associated / setup with the lambda function.\n\n* https://ap-southeast-1.console.aws.amazon.com/dynamodb/home?region=ap-southeast-1#tables:selected=staging_EXAMPLE\n* https://ap-southeast-1.console.aws.amazon.com/dynamodb/home?region=ap-southeast-1#tables:selected=production_EXAMPLE\n\nUpon deletion the image.json becomes an empty file.\n"
       },
-      "c9d5d497-b3f3-4c92-b9fb-9ab786c09a9d": {
-        "id": "c9d5d497-b3f3-4c92-b9fb-9ab786c09a9d",
+      "52411f15-2e87-4d10-b7db-41056b1c35c9": {
+        "id": "52411f15-2e87-4d10-b7db-41056b1c35c9",
         "parent": null,
         "name": "package.json",
         "type": "JSON_FILE",
@@ -105,316 +87,19 @@
         "code": "{\n  \"name\": \"aws-node-dynamodb-backup\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Serverless DynamoDB changes backed up to S3\",\n  \"repository\": \"\",\n  \"author\": \"Kai Hendry <hendry@spuul.com>\",\n  \"license\": \"MIT\",\n  \"dependencies\": {\n    \"aws-sdk\": \"^2.73.0\"\n  }\n}\n"
       }
     },
-    "rootNode": "6bcfbd55-1ac3-436b-8721-fbd88a17bebd",
+    "rootNode": "2709f6d1-a292-44b4-9ed1-36199d2d6e5e",
     "openFiles": [
-      "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e"
+      "80c154eb-e1e9-4602-a04c-738d0871ce09"
     ],
-    "currentFileId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
-    "resources": {
-      "ddbnewDynamoDBINdunil": {
-        "name": "ddbnewDynamoDBINdunil",
-        "type": "DynamoDB",
-        "config": {
-          "mode": 0,
-          "table": {
-            "arn": "",
-            "name": "newDynamoDBINdunil",
-            "partitionKey": "1",
-            "partitionKeyType": "N",
-            "hasSortKey": true,
-            "sortKey": "test",
-            "sortKeyType": "S",
-            "payPerRequest": true,
-            "mode": 0
-          },
-          "isGlobalEditMode": false,
-          "parameters": {
-            "mode": 0,
-            "table": {
-              "arn": "",
-              "name": "newDynamoDBINdunil",
-              "partitionKey": "1",
-              "partitionKeyType": "N",
-              "hasSortKey": true,
-              "sortKey": "test",
-              "sortKeyType": "S",
-              "payPerRequest": true,
-              "mode": 0
-            },
-            "isGlobalEditMode": false,
-            "parameters": {
-              "Key": {},
-              "Item": {},
-              "ExpressionAttributeValues": {}
-            },
-            "triggerParams": {
-              "StartingPosition": "TRIM_HORIZON",
-              "BatchSize": "100",
-              "StreamViewType": "NEW_IMAGE"
-            },
-            "validator": {
-              "validatableFields": {},
-              "validity": true
-            },
-            "valid": true,
-            "triggerConfig": {
-              "StartingPosition": "TRIM_HORIZON",
-              "BatchSize": "100",
-              "StreamViewType": "NEW_IMAGE"
-            },
-            "TableName": "newDynamoDBINdunil"
-          },
-          "triggerParams": {
-            "StartingPosition": "TRIM_HORIZON",
-            "BatchSize": "100",
-            "StreamViewType": "NEW_IMAGE"
-          },
-          "validator": {
-            "validatableFields": {},
-            "validity": true
-          },
-          "valid": true
-        }
-      },
-      "ddbbackup": {
-        "name": "ddbbackup",
-        "type": "DynamoDB",
-        "config": {
-          "mode": 0,
-          "table": {
-            "arn": "",
-            "name": "backup",
-            "partitionKey": "map",
-            "partitionKeyType": "S",
-            "hasSortKey": false,
-            "sortKey": "test",
-            "sortKeyType": "S",
-            "payPerRequest": true,
-            "mode": 0
-          },
-          "isGlobalEditMode": false,
-          "parameters": {
-            "mode": 0,
-            "table": {
-              "arn": "",
-              "name": "backup",
-              "partitionKey": "map",
-              "partitionKeyType": "S",
-              "hasSortKey": false,
-              "sortKey": "test",
-              "sortKeyType": "S",
-              "payPerRequest": true,
-              "mode": 0
-            },
-            "isGlobalEditMode": false,
-            "parameters": {
-              "mode": 0,
-              "table": {
-                "arn": "",
-                "name": "backup",
-                "partitionKey": "map",
-                "partitionKeyType": "S",
-                "hasSortKey": false,
-                "sortKey": "test",
-                "sortKeyType": "S",
-                "payPerRequest": true,
-                "mode": 0
-              },
-              "isGlobalEditMode": false,
-              "parameters": {
-                "mode": 0,
-                "table": {
-                  "arn": "",
-                  "name": "backup",
-                  "partitionKey": "test",
-                  "partitionKeyType": "S",
-                  "hasSortKey": false,
-                  "sortKey": "test",
-                  "sortKeyType": "S",
-                  "payPerRequest": true,
-                  "mode": 0
-                },
-                "isGlobalEditMode": false,
-                "parameters": {
-                  "mode": 0,
-                  "table": {
-                    "arn": "",
-                    "name": "backup",
-                    "partitionKey": "test",
-                    "partitionKeyType": "S",
-                    "hasSortKey": false,
-                    "sortKey": "test",
-                    "sortKeyType": "S",
-                    "payPerRequest": true,
-                    "mode": 0
-                  },
-                  "isGlobalEditMode": false,
-                  "parameters": {
-                    "mode": 0,
-                    "table": {
-                      "arn": "",
-                      "name": "newDynamoDBINdunil",
-                      "partitionKey": "1",
-                      "partitionKeyType": "N",
-                      "hasSortKey": true,
-                      "sortKey": "test",
-                      "sortKeyType": "S",
-                      "payPerRequest": true,
-                      "mode": 0
-                    },
-                    "isGlobalEditMode": false,
-                    "parameters": {
-                      "mode": 0,
-                      "table": {
-                        "arn": "",
-                        "name": "newDynamoDBINdunil",
-                        "partitionKey": "1",
-                        "partitionKeyType": "N",
-                        "hasSortKey": true,
-                        "sortKey": "test",
-                        "sortKeyType": "S",
-                        "payPerRequest": true,
-                        "mode": 0
-                      },
-                      "isGlobalEditMode": false,
-                      "parameters": {
-                        "Key": {},
-                        "Item": {},
-                        "ExpressionAttributeValues": {}
-                      },
-                      "triggerParams": {
-                        "StartingPosition": "TRIM_HORIZON",
-                        "BatchSize": "100",
-                        "StreamViewType": "NEW_IMAGE"
-                      },
-                      "validator": {
-                        "validatableFields": {},
-                        "validity": true
-                      },
-                      "valid": true,
-                      "triggerConfig": {
-                        "StartingPosition": "TRIM_HORIZON",
-                        "BatchSize": "100",
-                        "StreamViewType": "NEW_IMAGE"
-                      },
-                      "TableName": "newDynamoDBINdunil"
-                    },
-                    "triggerParams": {
-                      "StartingPosition": "TRIM_HORIZON",
-                      "BatchSize": "100",
-                      "StreamViewType": "NEW_IMAGE"
-                    },
-                    "validator": {
-                      "validatableFields": {},
-                      "validity": true
-                    },
-                    "valid": true,
-                    "triggerConfig": {
-                      "StartingPosition": "TRIM_HORIZON",
-                      "BatchSize": "100",
-                      "StreamViewType": "NEW_IMAGE"
-                    },
-                    "TableName": "newDynamoDBINdunil"
-                  },
-                  "triggerParams": {
-                    "StartingPosition": "TRIM_HORIZON",
-                    "BatchSize": "100",
-                    "StreamViewType": "NEW_IMAGE"
-                  },
-                  "validator": {
-                    "validatableFields": {},
-                    "validity": true
-                  },
-                  "valid": true,
-                  "triggerConfig": {
-                    "StartingPosition": "TRIM_HORIZON",
-                    "BatchSize": "100",
-                    "StreamViewType": "NEW_IMAGE"
-                  },
-                  "TableName": "backup"
-                },
-                "triggerParams": {
-                  "StartingPosition": "TRIM_HORIZON",
-                  "BatchSize": "100",
-                  "StreamViewType": "NEW_IMAGE"
-                },
-                "validator": {
-                  "validatableFields": {},
-                  "validity": true
-                },
-                "valid": true,
-                "triggerConfig": {
-                  "StartingPosition": "TRIM_HORIZON",
-                  "BatchSize": "100",
-                  "StreamViewType": "NEW_IMAGE"
-                },
-                "TableName": "backup"
-              },
-              "triggerParams": {
-                "StartingPosition": "TRIM_HORIZON",
-                "BatchSize": "100",
-                "StreamViewType": "NEW_IMAGE"
-              },
-              "validator": {
-                "validatableFields": {},
-                "validity": true
-              },
-              "valid": true,
-              "triggerConfig": {
-                "StartingPosition": "TRIM_HORIZON",
-                "BatchSize": "100",
-                "StreamViewType": "NEW_IMAGE"
-              },
-              "TableName": "backup"
-            },
-            "triggerParams": {
-              "StartingPosition": "AT_TIMESTAMP",
-              "BatchSize": "100",
-              "StreamViewType": "NEW_IMAGE"
-            },
-            "validator": {
-              "validatableFields": {},
-              "validity": true
-            },
-            "valid": true,
-            "triggerConfig": {
-              "StartingPosition": "AT_TIMESTAMP",
-              "BatchSize": "100",
-              "StreamViewType": "NEW_IMAGE"
-            },
-            "TableName": "backup"
-          },
-          "triggerParams": {
-            "StartingPosition": "AT_TIMESTAMP",
-            "BatchSize": "100",
-            "StreamViewType": "NEW_IMAGE"
-          },
-          "validator": {
-            "validatableFields": {},
-            "validity": true
-          },
-          "valid": true
-        }
-      },
-      "s3processenvindunil": {
-        "name": "s3processenvindunil",
-        "type": "S3",
-        "config": {
-          "mode": 0,
-          "bucket": {
-            "region": "us-east-1",
-            "name": "process.env.indunil"
-          }
-        }
-      }
-    },
+    "currentFileId": "80c154eb-e1e9-4602-a04c-738d0871ce09",
+    "resources": {},
     "customTemplate": {
       "dialect": "CloudFormation",
       "definitions": null
     },
     "envVariables": [
       {
-        "lambdaId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
+        "lambdaId": "80c154eb-e1e9-4602-a04c-738d0871ce09",
         "varKey": "STAGE",
         "varValue": "staging",
         "shouldPersist": true,
@@ -422,23 +107,23 @@
         "editable": true
       },
       {
-        "lambdaId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
+        "lambdaId": "80c154eb-e1e9-4602-a04c-738d0871ce09",
         "varKey": "BUCKET",
-        "varValue": "indunil",
+        "varValue": "EXAMPLE",
         "shouldPersist": true,
         "displayOnly": false,
         "editable": true
       },
       {
-        "lambdaId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
+        "lambdaId": "80c154eb-e1e9-4602-a04c-738d0871ce09",
         "varKey": "TABLE",
-        "varValue": "backup",
+        "varValue": "staging_EXAMPLE",
         "shouldPersist": true,
         "displayOnly": false,
         "editable": true
       },
       {
-        "lambdaId": "5bc3fd25-d2dc-4a18-a8bb-fd4ba440213e",
+        "lambdaId": "80c154eb-e1e9-4602-a04c-738d0871ce09",
         "varKey": "PREFIX",
         "varValue": "FOO",
         "shouldPersist": true,
@@ -471,7 +156,7 @@
     "projectRegion": "us-east-1",
     "platform": "AWS",
     "platformRegions": {},
-    "lastSave": 1576221975806
+    "lastSave": 1576470273087
   },
   "VCS_STATE": {
     "provider": "GitHub",
